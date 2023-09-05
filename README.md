@@ -1,6 +1,7 @@
 # Trasher Job
 
-![TrasherJob](https://github.com/Ph-o-e-n-ix/phoenix_trasherjob/assets/119653707/a4ee8c14-8e3f-4d94-b09a-68d23c3ef4f2)
+![Uploading trashjobphoenix.png…]()
+
 
 
 by Rising Phoenix 
