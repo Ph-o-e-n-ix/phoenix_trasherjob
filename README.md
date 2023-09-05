@@ -1,11 +1,9 @@
 # Trasher Job
 
-![Uploading trashjobphoenix.png…]()
-
-
+![TrasherJob](https://github.com/Ph-o-e-n-ix/phoenix_trasherjob/assets/119653707/efbe8161-f954-40e6-a8ae-926b3ba714c0)
 
 by Rising Phoenix 
-Hey, this is my Second Script, so if u have any Suggestions, feel free to ask.
+Hey, this is my 3rd Script, so if u have any Suggestions, feel free to ask.
 
 **Discord:** 
 xrisingphoenix
