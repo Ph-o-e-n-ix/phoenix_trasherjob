@@ -19,6 +19,47 @@ AddEventHandler('onClientResourceStart', function(ressourceName)
     print("" ..ressourceName.." started sucessfully")
 end)
 
+function endjob()
+    RemoveBlip(FirstBlip)
+    DeleteEntity(Prop)
+    DeleteEntity(garbagebag)
+    busy = false
+    busy2 = false
+    delete = false
+    spawnprop = false
+    inhand = false
+    pressed = false
+    trashinhand = false
+    zuruecklegen = false
+    busy3 = false
+    step5 = false
+    text = false
+    step6 = false
+    rewardpoints = 0
+    bonus1 = false 
+    bonus2 = false 
+    bonus3 = false
+    bonus4 = false
+end 
+
+function startjob()
+    step6 = true
+    blipactive = false
+    delete = false
+    spawnprop = false
+    inhand = false
+    pressed = false
+    trashinhand = false
+    zuruecklegen = false
+    busy3 = false
+    step5 = false
+    text = false
+end
+
+local zoneone 
+local zonetwo 
+local zonethree
+
 rewardpoints = 0
 
 step6 = true
@@ -34,6 +75,10 @@ zuruecklegen = false
 busy3 = false
 step5 = false
 text = false
+milo = false
+
+oxstart = false
+oxstop = false 
 
 Citizen.CreateThread(function()
     while true do 
@@ -43,14 +88,17 @@ Citizen.CreateThread(function()
             local playercoords = GetEntityCoords(player)
             local dst = Vdist(playercoords, v.startcoords.x , v.startcoords.y, v.startcoords.z)
             if dst < 3 then 
-                DrawText3D(v.startcoords.x , v.startcoords.y, v.startcoords.z, Translation[Config.Locale]['start_mission_text'])
-                DrawText3D(v.startcoords.x , v.startcoords.y, v.startcoords.z - 0.15, Translation[Config.Locale]['cancel_mission_text'])
-                if IsControlJustReleased(0, 38) then 
+                if not Config.UseOxTarget then
+                    DrawText3D(v.startcoords.x , v.startcoords.y, v.startcoords.z, Translation[Config.Locale]['start_mission_text'])
+                    DrawText3D(v.startcoords.x , v.startcoords.y, v.startcoords.z - 0.15, Translation[Config.Locale]['cancel_mission_text'])
+                end
+                if IsControlJustReleased(0, 38) or oxstart then 
                     if not IsPedInAnyVehicle(player, false) then
                         startjob()
                         if not busy then 
                             DoScreenFadeOut(1000)
                             Citizen.Wait(1500)
+                            oxstart = false
                             busy = true
                             busy2 = true
                             busy3 = true
@@ -118,9 +166,10 @@ Citizen.CreateThread(function()
                         Config.MSG(Translation[Config.Locale]['cant_do_in_vehicle'])
                     end
                 end
-                if IsControlJustReleased(0, 47) then 
+                if IsControlJustReleased(0, 47) or oxstop then 
                     if busy then
                         if not IsPedInAnyVehicle(PlayerPedId(), false) and busy then 
+                            oxstop = false
                             local playercoords = GetEntityCoords(PlayerPedId())
                             local vehiclecoords = GetEntityCoords(vehicle)
                             local distance = Vdist(playercoords, vehiclecoords)
@@ -159,7 +208,7 @@ Citizen.CreateThread(function()
 end)
     
 
-
+oxtrashcan = false
 Citizen.CreateThread(function()
     while true do 
         Citizen.Wait(0)
@@ -168,45 +217,108 @@ Citizen.CreateThread(function()
             local playerPed = PlayerPedId()
             local jetztcoords = GetEntityCoords(playerPed)
             local distanz = Vdist(jetztcoords, results.x, results.y, results.z)
-            if distanz < 2 and not text then 
+            if distanz < 2 and not text and not Config.UseOxTarget then 
                 DrawText3D(results.x, results.y, results.z , Translation[Config.Locale]['press_e_to_take_trash'])
             end
+            
         end
-        if busy3 and step5 and step6 then 
+        if busy3 and step5 and step6 and not inhand then 
             
             local playerPed = PlayerPedId()
             local nowcoords = GetEntityCoords(playerPed)
             local propdistance = Vdist(nowcoords, results.x, results.y, results.z)
             if propdistance < 3 and not delete then 
-                if IsControlJustPressed(0, 38) and not pressed then
-                    if not IsPedInAnyVehicle(playerPed, false) then
-                        Config.MSG(Translation[Config.Locale]['step1'])
-                        text = true
-                        busy2 = false
-                        trashinhand = true
-                        pressed = true
-                        DeleteEntity(Prop)
-                        RequestAnimDict('anim@heists@box_carry@')
-                        while not HasAnimDictLoaded('anim@heists@box_carry@') do
-                            Citizen.Wait(1)
-                        end
-                        TaskPlayAnim(playerPed, 'anim@heists@box_carry@', 'idle', 1.0, -8.0, -1, 49, 0, false, false, false)
-                        garbagebag = CreateObject(GetHashKey("prop_cs_bin_03"), 0, 0, 0, true, true, true) -- creates object
-                        AttachEntityToEntity(garbagebag, GetPlayerPed(-1), GetPedBoneIndex(GetPlayerPed(-1), 28422), 0.00, -0.420, -1.290, 0.0, 0.0, 0.0, true, true, false, true, 1, true)
-                        inhand = true
-                    else 
-                        Config.MSG(Translation[Config.Locale]['cant_do_in_vehicle'])
-                    end 
+                if Config.UseOxTarget and not oxtrashcan then
+                    oxtrashcan = true 
+                    zoneone = exports.ox_target:addSphereZone({ 
+                        coords = vec3(results.x, results.y, results.z + 1.0),
+                        radius = 2,
+                        debug = drawZones,
+                        options = {
+                            {
+                                name = 'taketrash',
+                                icon = 'fa-solid fa-trash-can',
+                                label = 'Take Trashcan',
+                                onSelect = function()
+                                    exports.ox_target:removeZone(zoneone)
+                                    if not IsPedInAnyVehicle(playerPed, false) then
+                                        Config.MSG(Translation[Config.Locale]['step1'])
+                                        text = true
+                                        busy2 = false
+                                        trashinhand = true
+                                        pressed = true
+                                        DeleteEntity(Prop)
+                                        RequestAnimDict('anim@heists@box_carry@')
+                                        while not HasAnimDictLoaded('anim@heists@box_carry@') do
+                                            Citizen.Wait(1)
+                                        end
+                                        TaskPlayAnim(playerPed, 'anim@heists@box_carry@', 'idle', 1.0, -8.0, -1, 49, 0, false, false, false)
+                                        garbagebag = CreateObject(GetHashKey("prop_cs_bin_03"), 0, 0, 0, true, true, true) -- creates object
+                                        AttachEntityToEntity(garbagebag, GetPlayerPed(-1), GetPedBoneIndex(GetPlayerPed(-1), 28422), 0.00, -0.420, -1.290, 0.0, 0.0, 0.0, true, true, false, true, 1, true)
+                                        inhand = true
+                                        Citizen.Wait(10000)
+                                        inhand = false
+                                    else 
+                                        oxtrashcan = false
+                                        Config.MSG(Translation[Config.Locale]['cant_do_in_vehicle'])
+                                    end 
+                                end
+                            }
+                        }
+                    }) 
+                else
+                    if IsControlJustPressed(0, 38) and not pressed then
+                        if not IsPedInAnyVehicle(playerPed, false) then
+                            Config.MSG(Translation[Config.Locale]['step1'])
+                            text = true
+                            busy2 = false
+                            trashinhand = true
+                            pressed = true
+                            DeleteEntity(Prop)
+                            RequestAnimDict('anim@heists@box_carry@')
+                            while not HasAnimDictLoaded('anim@heists@box_carry@') do
+                                Citizen.Wait(1)
+                            end
+                            TaskPlayAnim(playerPed, 'anim@heists@box_carry@', 'idle', 1.0, -8.0, -1, 49, 0, false, false, false)
+                            garbagebag = CreateObject(GetHashKey("prop_cs_bin_03"), 0, 0, 0, true, true, true) -- creates object
+                            AttachEntityToEntity(garbagebag, GetPlayerPed(-1), GetPedBoneIndex(GetPlayerPed(-1), 28422), 0.00, -0.420, -1.290, 0.0, 0.0, 0.0, true, true, false, true, 1, true)
+                            inhand = true
+                        else 
+                            Config.MSG(Translation[Config.Locale]['cant_do_in_vehicle'])
+                        end 
+                    end
                 end
             end
         end
     end
 end)
 
+
+RegisterCommand("zone1", function()
+    exports.ox_target:removeZone(zoneone)
+end)
+-- Citizen.CreateThread(function()
+--     while true do 
+--         Citizen.Wait(1)
+--         if busy then 
+--             if not oxtrashcan then 
+--                 exports.ox_target:removeZone(id1)
+--             elseif not oxtrashtrunk then
+--                 exports.ox_target:removeZone(id2)
+--             elseif not oxtakecanback then
+--                 exports.ox_target:removeZone(id3)
+--             end
+--         end 
+--         Citizen.Wait(5000)
+--     end
+-- end)
+
 step2 = false 
 step3 = false
 endstep = false
 
+oxtrashtrunk = false
+oxtakecanback = false
 Citizen.CreateThread(function()
     while true do 
         Citizen.Wait(0)
@@ -217,13 +329,94 @@ Citizen.CreateThread(function()
                 local playerCoords = GetEntityCoords(playerPed)
                 local Distance = Vdist(playerCoords, trunkpos.x , trunkpos.y, trunkpos.z)
                 if Distance < 3 then
-                    DrawText3D(trunkpos.x , trunkpos.y, trunkpos.z , Translation[Config.Locale]['press_to_take_trunk'])
-                    shownotify('Drücke E')
-                    if IsControlJustReleased(0, 38) then 
-                        if not IsPedInAnyVehicle(playerPed, false) then 
-                            if Config.UseMiniGame then
-                                game = exports["k5_skillcheck"]:skillCheck("easy")
-                                if game then 
+                    if Config.UseOxTarget then
+                        if not oxtrashtrunk then
+                            oxtrashtrunk = true
+                            zonetwo = exports.ox_target:addSphereZone({ 
+                                coords = vec3(trunkpos.x , trunkpos.y, trunkpos.z + 1.0),
+                                radius = 4,
+                                debug = drawZones,
+                                options = {
+                                    {
+                                        name = 'trunkstart',
+                                        icon = 'fa-solid fa-trash-can',
+                                        label = 'Empty Trashcan',
+                                        onSelect = function()
+                                            exports.ox_target:removeZone(zonetwo)
+                                            if not IsPedInAnyVehicle(playerPed, false) then 
+                                                if Config.UseMiniGame then
+                                                    game = exports["k5_skillcheck"]:skillCheck("easy")
+                                                    if game then 
+                                                        if Config.UseAnProgbar then
+                                                            SetVehicleDoorOpen(vehicle, 5, false, false)
+                                                            exports['an_progBar']:run(2,Translation[Config.Locale]['trash_empty'],'#E14127')
+                                                            Citizen.Wait(2000)
+                                                            SetVehicleDoorShut(vehicle, 5, false)
+                                                        end
+                                                        Config.MSG(Translation[Config.Locale]['bring_can_back'])
+                                                        DeleteEntity(garbagebag)
+                                                        trash2 = CreateObject(GetHashKey("prop_cs_bin_01_skinned"), 0, 0, 0, true, true, true) -- creates object
+                                                        AttachEntityToEntity(trash2, GetPlayerPed(-1), GetPedBoneIndex(GetPlayerPed(-1), 28422), 0.00, -0.420, -1.290, 0.0, 0.0, 0.0, true, true, false, true, 1, true)
+                                                        zuruecklegen = true
+                                                        trashinhand = false
+                                                        step2 = true
+                                                        Citizen.Wait(1000)
+                                                        step3 = true
+                                                        endstep = false
+                                                    end
+                                                else 
+                                                    if Config.UseAnProgbar then
+                                                        SetVehicleDoorOpen(vehicle, 5, false, false)
+                                                        exports['an_progBar']:run(2,Translation[Config.Locale]['trash_empty'],'#E14127')
+                                                        Citizen.Wait(2000)
+                                                        SetVehicleDoorShut(vehicle, 5, false)
+                                                    end
+                                                    Config.MSG(Translation[Config.Locale]['bring_can_back'])
+                                                    DeleteEntity(garbagebag)
+                                                    trash2 = CreateObject(GetHashKey("prop_cs_bin_01_skinned"), 0, 0, 0, true, true, true) -- creates object
+                                                    AttachEntityToEntity(trash2, GetPlayerPed(-1), GetPedBoneIndex(GetPlayerPed(-1), 28422), 0.00, -0.420, -1.290, 0.0, 0.0, 0.0, true, true, false, true, 1, true)
+                                                    zuruecklegen = true
+                                                    trashinhand = false
+                                                    step2 = true
+                                                    Citizen.Wait(1000)
+                                                    step3 = true
+                                                    endstep = false
+                                                end
+                                            else 
+                                                Config.MSG(Translation[Config.Locale]['cant_do_in_vehicle'])
+                                            end
+                                        end
+                                    }
+                                }
+                            }) 
+                        end
+                    else
+                        DrawText3D(trunkpos.x , trunkpos.y, trunkpos.z , Translation[Config.Locale]['press_to_take_trunk'])
+                        shownotify('Drücke E')
+                        if IsControlJustReleased(0, 38) then 
+                            if not IsPedInAnyVehicle(playerPed, false) then 
+                                if Config.UseMiniGame then
+                                    game = exports["k5_skillcheck"]:skillCheck("easy")
+                                    if game then 
+                                        if Config.UseAnProgbar then
+                                            SetVehicleDoorOpen(vehicle, 5, false, false)
+                                            exports['an_progBar']:run(2,Translation[Config.Locale]['trash_empty'],'#E14127')
+                                            Citizen.Wait(2000)
+                                            SetVehicleDoorShut(vehicle, 5, false)
+                                        end
+                                        Config.MSG(Translation[Config.Locale]['bring_can_back'])
+                                        DeleteEntity(garbagebag)
+                                        trash2 = CreateObject(GetHashKey("prop_cs_bin_01_skinned"), 0, 0, 0, true, true, true) -- creates object
+                                        AttachEntityToEntity(trash2, GetPlayerPed(-1), GetPedBoneIndex(GetPlayerPed(-1), 28422), 0.00, -0.420, -1.290, 0.0, 0.0, 0.0, true, true, false, true, 1, true)
+                                        zuruecklegen = true
+                                        trashinhand = false
+                                        step2 = true
+                                        Citizen.Wait(1000)
+                                        step3 = true
+                                        endstep = false
+                                        -- inhand = false
+                                    end
+                                else 
                                     if Config.UseAnProgbar then
                                         SetVehicleDoorOpen(vehicle, 5, false, false)
                                         exports['an_progBar']:run(2,Translation[Config.Locale]['trash_empty'],'#E14127')
@@ -242,25 +435,8 @@ Citizen.CreateThread(function()
                                     endstep = false
                                 end
                             else 
-                                if Config.UseAnProgbar then
-                                    SetVehicleDoorOpen(vehicle, 5, false, false)
-                                    exports['an_progBar']:run(2,Translation[Config.Locale]['trash_empty'],'#E14127')
-                                    Citizen.Wait(2000)
-                                    SetVehicleDoorShut(vehicle, 5, false)
-                                end
-                                Config.MSG(Translation[Config.Locale]['bring_can_back'])
-                                DeleteEntity(garbagebag)
-                                trash2 = CreateObject(GetHashKey("prop_cs_bin_01_skinned"), 0, 0, 0, true, true, true) -- creates object
-                                AttachEntityToEntity(trash2, GetPlayerPed(-1), GetPedBoneIndex(GetPlayerPed(-1), 28422), 0.00, -0.420, -1.290, 0.0, 0.0, 0.0, true, true, false, true, 1, true)
-                                zuruecklegen = true
-                                trashinhand = false
-                                step2 = true
-                                Citizen.Wait(1000)
-                                step3 = true
-                                endstep = false
+                                Config.MSG(Translation[Config.Locale]['cant_do_in_vehicle'])
                             end
-                        else 
-                            Config.MSG(Translation[Config.Locale]['cant_do_in_vehicle'])
                         end
                     end
                 end 
@@ -273,27 +449,75 @@ Citizen.CreateThread(function()
                     DrawMarker(0, results.x, results.y, results.z, 0, 0, 0, 0, 0, 0, 1.0,1.0,1.1, 18,222,86, 150, 1, 0, 2, 0, 0, 0, 0)
                     if not endstep then 
                         if destence < 2 then 
-                            DrawText3D(results.x, results.y, results.z , Translation[Config.Locale]['press_to_bring_trash_back'])
-                            if IsControlJustReleased(0, 38) and step3 then 
-                                if not IsPedInAnyVehicle(playerPed, false) then
-                                    endstep = true
-                                    DeleteEntity(trash2)
-                                    local Prop2 = CreateObject(GetHashKey("prop_cs_bin_01_skinned"), results.x, results.y, results.z - 1.0, false, false, false)
-                                    SetEntityHeading(Prop2, results.h)
-                                    ClearPedTasks(playerPed)
-                                    RemoveBlip(FirstBlip)
-                                    busy2 = true
-                                    blipactive = false
-                                    pressed = false
-                                    text = false
-                                    step2 = false
-                                    showPictureNotification('CHAR_CHEF', Translation[Config.Locale]['reward'], Translation[Config.Locale]['reward_title'], '')
-                                    TriggerServerEvent("trash:getreward")
-                                    rewardpoints = rewardpoints + 1
-                                    Citizen.Wait(5000)
-                                    DeleteEntity(Prop2)
-                                else 
-                                    Config.MSG(Translation[Config.Locale]['cant_do_in_vehicle'])
+                            if Config.UseOxTarget then
+                                if not oxtakecanback then
+                                    oxtakecanback = true 
+                                    zonethree = exports.ox_target:addSphereZone({ 
+                                        coords = vec3(results.x, results.y, results.z + 1.0),
+                                        radius = 3,
+                                        debug = drawZones,
+                                        options = {
+                                            {
+                                                name = 'taketrash',
+                                                icon = 'fa-solid fa-trash-can',
+                                                label = 'Bring Trashcan back',
+                                                onSelect = function()
+                                                    exports.ox_target:removeZone(zonethree)
+                                                    if not IsPedInAnyVehicle(playerPed, false) then
+                                                        endstep = true
+                                                        DeleteEntity(trash2)
+                                                        local Prop2 = CreateObject(GetHashKey("prop_cs_bin_01_skinned"), results.x, results.y, results.z - 1.0, false, false, false)
+                                                        SetEntityHeading(Prop2, results.h)
+                                                        ClearPedTasks(playerPed)
+                                                        RemoveBlip(FirstBlip)
+                                                        busy2 = true
+                                                        blipactive = false
+                                                        pressed = false
+                                                        text = false
+                                                        step2 = false
+                                                        showPictureNotification('CHAR_CHEF', Translation[Config.Locale]['reward'], Translation[Config.Locale]['reward_title'], '')
+                                                        TriggerServerEvent("trash:getreward")
+                                                        rewardpoints = rewardpoints + 1
+                                                        Citizen.Wait(5000)
+                                                        DeleteEntity(Prop2)
+                                                        Citizen.Wait(5000)
+                                                        oxtakecanback = false
+                                                        oxtrashcan = false
+                                                        oxtrashtrunk = false
+                                                        
+                                                    else 
+                                                        oxtakecanback = false
+                                                        Config.MSG(Translation[Config.Locale]['cant_do_in_vehicle'])
+                                                    end  
+                                                end
+                                            }
+                                        }
+                                    }) 
+                                end
+                            else 
+                                DrawText3D(results.x, results.y, results.z , Translation[Config.Locale]['press_to_bring_trash_back'])
+                                if IsControlJustReleased(0, 38) and step3 then 
+                                    if not IsPedInAnyVehicle(playerPed, false) then
+                                        endstep = true
+                                        DeleteEntity(trash2)
+                                        local Prop2 = CreateObject(GetHashKey("prop_cs_bin_01_skinned"), results.x, results.y, results.z - 1.0, false, false, false)
+                                        SetEntityHeading(Prop2, results.h)
+                                        ClearPedTasks(playerPed)
+                                        RemoveBlip(FirstBlip)
+                                        busy2 = true
+                                        blipactive = false
+                                        pressed = false
+                                        text = false
+                                        step2 = false
+                                        showPictureNotification('CHAR_CHEF', Translation[Config.Locale]['reward'], Translation[Config.Locale]['reward_title'], '')
+                                        TriggerServerEvent("trash:getreward")
+                                        rewardpoints = rewardpoints + 1
+                                        inhand = false
+                                        Citizen.Wait(5000)
+                                        DeleteEntity(Prop2)
+                                    else 
+                                        Config.MSG(Translation[Config.Locale]['cant_do_in_vehicle'])
+                                    end
                                 end
                             end
                         end 
@@ -301,6 +525,12 @@ Citizen.CreateThread(function()
                 end
             end 
     end      
+end)
+
+RegisterCommand("ox", function()
+    print(oxtrashcan)
+    print(oxtrashtrunk)
+    print(oxtakecanback)
 end)
 
 bonus1 = false 
@@ -368,41 +598,41 @@ Citizen.CreateThread(function()
     end
 end)
 
-function endjob()
-    RemoveBlip(FirstBlip)
-    DeleteEntity(Prop)
-    DeleteEntity(garbagebag)
-    busy = false
-    busy2 = false
-    delete = false
-    spawnprop = false
-    inhand = false
-    pressed = false
-    trashinhand = false
-    zuruecklegen = false
-    busy3 = false
-    step5 = false
-    text = false
-    step6 = false
-    rewardpoints = 0
-    bonus1 = false 
-    bonus2 = false 
-    bonus3 = false
-    bonus4 = false
-end 
-
-function startjob()
-    step6 = true
-    blipactive = false
-    delete = false
-    spawnprop = false
-    inhand = false
-    pressed = false
-    trashinhand = false
-    zuruecklegen = false
-    busy3 = false
-    step5 = false
-    text = false
+if Config.UseOxTarget then
+    Citizen.CreateThread(function()
+        for k, v in pairs(Config.StartMission) do 
+            zoneone = exports.ox_target:addSphereZone({ 
+                coords = vec3(v.startcoords.x , v.startcoords.y, v.startcoords.z),
+                radius = 1,
+                drawSprite = false,
+                options = {
+                    {
+                        name = 'startjob',
+                        icon = 'fa-solid fa-trash-can',
+                        label = 'Start TrasherJob',
+                        onSelect = function()
+                            oxstart = true
+                        end
+                    }
+                }
+            }) 
+            zoneone = exports.ox_target:addSphereZone({ 
+                coords = vec3(v.startcoords.x , v.startcoords.y, v.startcoords.z - 0.15),
+                radius = 1,
+                drawSprite = false,
+                options = {
+                    {
+                        name = 'stopjob',
+                        icon = 'fa-solid fa-trash-can',
+                        label = 'Stop TrasherJob',
+                        onSelect = function()
+                            oxstop = true
+                        end
+                    }
+                }
+            }) 
+        end
+    end)
 end
 
 function showPictureNotification(icon, msg, title, subtitle)
@@ -437,4 +667,3 @@ end
 AddEventHandler('playerDropped', function ()
     endjob()
 end)
-
