@@ -4,6 +4,8 @@ Config.UseNewESX = true -- New ESX has a new Export. Enable if you need this
 
 Config.UseLegacyFuel = false -- true if you use Legacyfuel
 
+Config.UseOxTarget = false -- true if you use ox_target
+
 Config.Locale = 'en'
 
 Config.Bail = 2500 -- Amount of Bail a Player has to Pay for the Vehicle. When hes bringing it back, he gets the Money back, if nothing do 0
