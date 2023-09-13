@@ -22,3 +22,5 @@ There are also a Webhook. This was for my Usage, but i dont wanted to delete. So
 There are some Trashcan props. You can set the visibility local or visible for all players. The Trashcanprop will be deletet after a few seconds ur finished the trashcan.
 
 You can also add your own vehicle in the Config so every Car is aviable.
+
+[<img alt="alt_text"  src="https://i.imgur.com/yRsZ96F.png" />](https://discord.gg/CUXK7CWx3P)
