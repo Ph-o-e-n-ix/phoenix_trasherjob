@@ -92,14 +92,13 @@ Citizen.CreateThread(function()
                     DrawText3D(v.startcoords.x , v.startcoords.y, v.startcoords.z, Translation[Config.Locale]['start_mission_text'])
                     DrawText3D(v.startcoords.x , v.startcoords.y, v.startcoords.z - 0.15, Translation[Config.Locale]['cancel_mission_text'])
                 end
-                if IsControlJustReleased(0, 38) or oxstart then 
+                if IsControlJustReleased(0, 38) and not Config.UseOxTarget then 
                     if not IsPedInAnyVehicle(player, false) then
-                        startjob()
                         if not busy then 
+                            busy = true
+                            startjob()
                             DoScreenFadeOut(1000)
                             Citizen.Wait(1500)
-                            oxstart = false
-                            busy = true
                             busy2 = true
                             busy3 = true
 
@@ -166,7 +165,7 @@ Citizen.CreateThread(function()
                         Config.MSG(Translation[Config.Locale]['cant_do_in_vehicle'])
                     end     
                 end
-                if IsControlJustReleased(0, 47) or oxstop then 
+                if IsControlJustReleased(0, 47) and not Config.UseOxTarget then 
                     if busy then
                         if not IsPedInAnyVehicle(PlayerPedId(), false) and busy then 
                             oxstop = false
@@ -589,7 +588,7 @@ Citizen.CreateThread(function()
         while not HasAnimDictLoaded("oddjobs@assassinate@guard") do
             Wait(1)
         end
-        local ped =  CreatePed(4, v.pedname, v.startcoords.x, v.startcoords.y, v.startcoords.z -1.0, v.pedheading, false, false)
+        ped =  CreatePed(4, v.pedname, v.startcoords.x, v.startcoords.y, v.startcoords.z -1.0, v.pedheading, false, false)
         SetEntityHeading(ped, v.pedheading)
         FreezeEntityPosition(ped, true)
         SetEntityInvincible(ped, true)
@@ -601,141 +600,127 @@ end)
 if Config.UseOxTarget then
     Citizen.CreateThread(function()
         for k, v in pairs(Config.StartMission) do 
-            zoneone = exports.ox_target:addSphereZone({ 
-                coords = vec3(v.startcoords.x , v.startcoords.y, v.startcoords.z),
-                radius = 1,
-                drawSprite = false,
-                options = {
-                    {
-                        name = 'startjob',
-                        icon = 'fa-solid fa-trash-can',
-                        label = 'Start TrasherJob',
-                        onSelect = function()
-                            local player = PlayerPedId()
-                            if not IsPedInAnyVehicle(player, false) then
-                                startjob()
-                                if not busy then 
-                                    DoScreenFadeOut(1000)
-                                    Citizen.Wait(1500)
-                                    oxstart = false
-                                    busy = true
-                                    busy2 = true
-                                    busy3 = true
-        
-                                    local car = GetHashKey(v.vehiclespawnname)
-                                    RequestModel(car)
-                                    while not HasModelLoaded(car) do
-                                        RequestModel(car)
-                                        Citizen.Wait(50)
-                                    end
-                                    vehicle = CreateVehicle(car, v.vehiclespawncoords.x, v.vehiclespawncoords.y, v.vehiclespawncoords.z, v.vehiclespawnheading, true, false)
-                                    if Config.UseLegacyFuel then
-                                        local getFuel = exports['LegacyFuel']:GetFuel(vehicle)
-                                        local fuelLevel = getFuel 
-                                        exports['LegacyFuel']:SetFuel(vehicle, 100)
-                                    end
-                                    SetPedIntoVehicle(player, vehicle, -1)
-                                    SetEntityAsNoLongerNeeded(vehicle)
-                                    SetVehicleNumberPlateText(vehicle, 'TRASH')
-                                    SetVehicleNumberPlateTextIndex(vehicle, 1)
-                                    SetEntityAsMissionEntity(vehicle, false, false)
-                                    Citizen.Wait(1500)
-                                    DoScreenFadeIn(1000)
-                                    Config.MSG(Translation[Config.Locale]['sucessfully_started_mission'])
-                                    if Config.Bail > 0 then
-                                        showPictureNotification('CHAR_CHEF', Translation[Config.Locale]['took_bail'], 'Chef', '')
-                                        TriggerServerEvent("trash:takebail")
-                                    end
-                                    Citizen.CreateThread(function()
-                                        while true do 
-                                                Citizen.Wait(0)
-                                                if busy and not spawnprop then
-                                                    spawnprop = true
-                                                    local playerPed = PlayerPedId()
-                                                    local nowcoords = GetEntityCoords(playerPed)
-                                                    missionvehicle = GetVehiclePedIsIn(playerPed, true)
-                                                    RequestModel(GetHashKey("prop_cs_bin_03"))
-                                                    while not HasModelLoaded("prop_cs_bin_03") do 
-                                                        Citizen.Wait(1)
-                                                    end
-                                                end
-                                                if not blipactive then
-                                                    blipactive = true
-                                                    results = Config.SpawnProps[math.random(#Config.SpawnProps)]
-                                                    Prop = CreateObject(GetHashKey("prop_cs_bin_03"), results.x, results.y, results.z -1.0, Config.VisibleforOtherPlayer, false, false)
-                                                    SetEntityHeading(Prop, results.h)
-                                                    FreezeEntityPosition(Prop, true)
-                                                    FirstBlip = AddBlipForCoord(results.x, results.y, results.z)
-                                                    SetBlipSprite(FirstBlip, 1)
-                                                    SetBlipScale(FirstBlip, 0.9)
-                                                    SetBlipColour(FirstBlip, 2)
-                                                    BeginTextCommandSetBlipName("STRING")
-                                                    AddTextComponentString(Translation[Config.Locale]['prop_blip_name'])
-                                                    EndTextCommandSetBlipName(FirstBlip)
-                                                    SetBlipRoute(FirstBlip, true)
-                                                    delete = false
-                                                    step5 = true
-                                                end
-                                        end
-                                    end)
-                                else 
-                                    Config.MSG(Translation[Config.Locale]['already_startet_mission'])
-                                end
-                            else
-                                Config.MSG(Translation[Config.Locale]['cant_do_in_vehicle'])
-                            end  
+            exports.ox_target:addLocalEntity(ped,
+            {
+                name = 'vehicle1',
+                icon = 'fa-solid fa-car',
+                distance = 3.0,
+                onSelect = function()
+                    if not busy then 
+                        local player = PlayerPedId()
+                        startjob()
+                        DoScreenFadeOut(1000)
+                        Citizen.Wait(1500)
+                        oxstart = false
+                        busy = true
+                        busy2 = true
+                        busy3 = true
+
+                        local car = GetHashKey(v.vehiclespawnname)
+                        RequestModel(car)
+                        while not HasModelLoaded(car) do
+                            RequestModel(car)
+                            Citizen.Wait(50)
                         end
-                    }
-                }
-            }) 
-            zoneone = exports.ox_target:addSphereZone({ 
-                coords = vec3(v.startcoords.x , v.startcoords.y, v.startcoords.z - 0.15),
-                radius = 1,
-                drawSprite = false,
-                options = {
-                    {
-                        name = 'stopjob',
-                        icon = 'fa-solid fa-trash-can',
-                        label = 'Stop TrasherJob',
-                        onSelect = function()
-                            if busy then
-                                if not IsPedInAnyVehicle(PlayerPedId(), false) and busy then 
-                                    oxstop = false
-                                    local playercoords = GetEntityCoords(PlayerPedId())
-                                    local vehiclecoords = GetEntityCoords(vehicle)
-                                    local distance = Vdist(playercoords, vehiclecoords)
-                                    if distance < 250 then
-                                        if Config.Bail > 0 then
-                                            showPictureNotification('CHAR_CHEF', Translation[Config.Locale]['back_bail'], 'Chef', '')
-                                            TriggerServerEvent("trash:givebailback")
+                        vehicle = CreateVehicle(car, v.vehiclespawncoords.x, v.vehiclespawncoords.y, v.vehiclespawncoords.z, v.vehiclespawnheading, true, false)
+                        if Config.UseLegacyFuel then
+                            local getFuel = exports['LegacyFuel']:GetFuel(vehicle)
+                            local fuelLevel = getFuel 
+                            exports['LegacyFuel']:SetFuel(vehicle, 100)
+                        end
+                        SetPedIntoVehicle(player, vehicle, -1)
+                        SetEntityAsNoLongerNeeded(vehicle)
+                        SetVehicleNumberPlateText(vehicle, 'TRASH')
+                        SetVehicleNumberPlateTextIndex(vehicle, 1)
+                        SetEntityAsMissionEntity(vehicle, false, false)
+                        Citizen.Wait(1500)
+                        DoScreenFadeIn(1000)
+                        Config.MSG(Translation[Config.Locale]['sucessfully_started_mission'])
+                        if Config.Bail > 0 then
+                            showPictureNotification('CHAR_CHEF', Translation[Config.Locale]['took_bail'], 'Chef', '')
+                            TriggerServerEvent("trash:takebail")
+                        end
+                        Citizen.CreateThread(function()
+                            while true do 
+                                    Citizen.Wait(0)
+                                    if busy and not spawnprop then
+                                        spawnprop = true
+                                        local playerPed = PlayerPedId()
+                                        local nowcoords = GetEntityCoords(playerPed)
+                                        missionvehicle = GetVehiclePedIsIn(playerPed, true)
+                                        RequestModel(GetHashKey("prop_cs_bin_03"))
+                                        while not HasModelLoaded("prop_cs_bin_03") do 
+                                            Citizen.Wait(1)
                                         end
-                                        DeleteEntity(vehicle)
-                                        DeleteEntity(Prop)
-                                        Config.MSG(Translation[Config.Locale]['canceled_mission'])
-                                        busy = false
-                                        endjob()
-                                        RemoveBlip(FirstBlip)
-                                    else 
-                                        if Config.Bail > 0 then
-                                            Config.MSG(Translation[Config.Locale]['trasher_not_nearby'])
-                                        end
-                                        DeleteEntity(vehicle)
-                                        DeleteEntity(Prop)
-                                        Config.MSG(Translation[Config.Locale]['canceled_mission'])
-                                        busy = false
-                                        endjob()
-                                        RemoveBlip(FirstBlip)
                                     end
-                                else 
-                                    Config.MSG(Translation[Config.Locale]['cant_do_in_vehicle'])
-                                end 
-                            else 
-                                Config.MSG('You didnt started the Job')
+                                    if not blipactive then
+                                        blipactive = true
+                                        results = Config.SpawnProps[math.random(#Config.SpawnProps)]
+                                        Prop = CreateObject(GetHashKey("prop_cs_bin_03"), results.x, results.y, results.z -1.0, Config.VisibleforOtherPlayer, false, false)
+                                        SetEntityHeading(Prop, results.h)
+                                        FreezeEntityPosition(Prop, true)
+                                        FirstBlip = AddBlipForCoord(results.x, results.y, results.z)
+                                        SetBlipSprite(FirstBlip, 1)
+                                        SetBlipScale(FirstBlip, 0.9)
+                                        SetBlipColour(FirstBlip, 2)
+                                        BeginTextCommandSetBlipName("STRING")
+                                        AddTextComponentString(Translation[Config.Locale]['prop_blip_name'])
+                                        EndTextCommandSetBlipName(FirstBlip)
+                                        SetBlipRoute(FirstBlip, true)
+                                        delete = false
+                                        step5 = true
+                                    end
                             end
-                        end
-                    }
-                }
-            }) 
+                        end)
+                    else 
+                        Config.MSG(Translation[Config.Locale]['already_startet_mission'])
+                    end
+                end,
+                label = 'Start Job',
+            })
+            exports.ox_target:addLocalEntity(ped,
+            {
+                name = 'vehicle1',
+                icon = 'fa-solid fa-car',
+                distance = 3.0,
+                onSelect = function()
+                    if busy then
+                        if not IsPedInAnyVehicle(PlayerPedId(), false) and busy then 
+                            oxstop = false
+                            local playercoords = GetEntityCoords(PlayerPedId())
+                            local vehiclecoords = GetEntityCoords(vehicle)
+                            local distance = Vdist(playercoords, vehiclecoords)
+                            if distance < 250 then
+                                if Config.Bail > 0 then
+                                    showPictureNotification('CHAR_CHEF', Translation[Config.Locale]['back_bail'], 'Chef', '')
+                                    TriggerServerEvent("trash:givebailback")
+                                end
+                                DeleteEntity(vehicle)
+                                DeleteEntity(Prop)
+                                Config.MSG(Translation[Config.Locale]['canceled_mission'])
+                                busy = false
+                                endjob()
+                                RemoveBlip(FirstBlip)
+                            else 
+                                if Config.Bail > 0 then
+                                    Config.MSG(Translation[Config.Locale]['trasher_not_nearby'])
+                                end
+                                DeleteEntity(vehicle)
+                                DeleteEntity(Prop)
+                                Config.MSG(Translation[Config.Locale]['canceled_mission'])
+                                busy = false
+                                endjob()
+                                RemoveBlip(FirstBlip)
+                            end
+                        else 
+                            Config.MSG(Translation[Config.Locale]['cant_do_in_vehicle'])
+                        end 
+                    else 
+                        Config.MSG('You didnt started the Job')
+                    end
+                end,
+                label = 'Stop Job',
+            })   
         end
     end)
 end
