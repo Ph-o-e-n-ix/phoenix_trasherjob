@@ -582,13 +582,15 @@ Citizen.CreateThread(function()
     for k, v in pairs(Config.StartMission) do
         RequestModel(GetHashKey(v.pedname))
         while not HasModelLoaded(GetHashKey(v.pedname)) do
-            Wait(1)
+            Wait(25)
+            print("NIXLADEN")
         end
         RequestAnimDict("oddjobs@assassinate@guard")
         while not HasAnimDictLoaded("oddjobs@assassinate@guard") do
-            Wait(1)
+            Wait(25)
+            print("NIXANIMATION")
         end
-        ped =  CreatePed(4, v.pedname, v.startcoords.x, v.startcoords.y, v.startcoords.z -1.0, v.pedheading, false, false)
+        ped = CreatePed(4, v.pedname, v.startcoords.x, v.startcoords.y, v.startcoords.z -1.0, v.pedheading, false, false)
         SetEntityHeading(ped, v.pedheading)
         FreezeEntityPosition(ped, true)
         SetEntityInvincible(ped, true)
@@ -599,6 +601,9 @@ end)
 
 if Config.UseOxTarget then
     Citizen.CreateThread(function()
+        while not DoesEntityExist(ped) do 
+            Citizen.Wait(25)
+        end
         for k, v in pairs(Config.StartMission) do 
             exports.ox_target:addLocalEntity(ped,
             {
