@@ -583,12 +583,10 @@ Citizen.CreateThread(function()
         RequestModel(GetHashKey(v.pedname))
         while not HasModelLoaded(GetHashKey(v.pedname)) do
             Wait(25)
-            print("NIXLADEN")
         end
         RequestAnimDict("oddjobs@assassinate@guard")
         while not HasAnimDictLoaded("oddjobs@assassinate@guard") do
             Wait(25)
-            print("NIXANIMATION")
         end
         ped = CreatePed(4, v.pedname, v.startcoords.x, v.startcoords.y, v.startcoords.z -1.0, v.pedheading, false, false)
         SetEntityHeading(ped, v.pedheading)
